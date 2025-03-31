@@ -18,3 +18,17 @@ spec:
         image: gcr.io/YOUR_PROJECT_ID/fastapi-gke:latest
         ports:
         - containerPort: 80
+        resources:
+          requests:
+            memory: "12Gi"
+            cpu: "2"
+          limits:
+            memory: "16Gi"
+            cpu: "2"
+        volumeMounts:
+          - name: model-cache
+            mountPath: /root/.cache/huggingface
+      volumes:
+        - name: model-cache
+          persistentVolumeClaim:
+            claimName: model-cache-pvc

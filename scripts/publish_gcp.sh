@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+# Assumes you've setup a GKE Autopilot cluster
 ZONE="us-central1"
 NAMESPACE="softwaredoug-training"
 export PLATFORM="linux/amd64"
@@ -92,6 +92,9 @@ kubectl --context="$K8S_CONTEXT" delete pods --all -n $NAMESPACE
 kubectl --context="$K8S_CONTEXT" delete services --all -n $NAMESPACE
 
 
+exit
+
+
 
 # Read k8s/deployment.yaml
 K8S_DEPLOYMENT=$(<k8s/deployment.yaml)
@@ -108,17 +111,29 @@ if grep -q "YOUR_PROJECT_ID" k8s/.deployment.yaml; then
   exit 1
 fi
 
+kubectl --context="$K8S_CONTEXT" apply -f k8s/pvc.yaml
 kubectl --context="$K8S_CONTEXT" apply -f k8s/.deployment.yaml
 kubectl --context="$K8S_CONTEXT" apply -f k8s/service.yaml
 
 echo "Waiting for external IP..."
 EXTERNAL_IP=""
 for i in {1..30}; do
-  EXTERNAL_IP=$(kubectl get service llm-query-understand --output=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  EXTERNAL_IP=$(kubectl get service llm-query-understand --output=jsonpath='{.status.loadBalancer.ingress[0].ip}' -n $NAMESPACE)
   if [[ -n "$EXTERNAL_IP" ]]; then
     echo "Service is available at http://$EXTERNAL_IP"
     break
   fi
   echo "Waiting for external IP $EXTERNAL_IP... (${i}/30)"
+  sleep 5
+done
+
+echo "Waiting for pod to be in RUNNING state..."
+for i in {1..30}; do
+  POD_STATUS=$(kubectl get pods -l app=llm-query-understand -n $NAMESPACE -o jsonpath='{.items[0].status.phase}')
+  if [[ "$POD_STATUS" == "Running" ]]; then
+    echo "Pod is running!"
+    break
+  fi
+  echo "Waiting for pod... ($POD_STATUS) (${i}/30)"
   sleep 5
 done

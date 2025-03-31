@@ -15,3 +15,6 @@ async def echo(request: Request):
     echo = f"Echo: {prompt}"
     resp = {"echo": echo}
     return JSONResponse(content=resp)
+
+
+print("App started")

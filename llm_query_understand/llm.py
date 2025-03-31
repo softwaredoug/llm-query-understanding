@@ -1,9 +1,16 @@
 from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
+import os
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+
+
+def space_on_devices():
+    print("Disk space:")
+    os.system("df -h")
+    os.system("du -h /root/.cache/huggingface")
 
 
 class LargeLanguageModel:
@@ -11,6 +18,7 @@ class LargeLanguageModel:
     def __init__(self, device=DEVICE, model="Qwen/Qwen2.5-7B"):
         self.device = device
         print(f"Using device: {self.device}")
+        space_on_devices()
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         print("Loading model...")
         self.model = AutoModelForCausalLM.from_pretrained(model).to(self.device)
