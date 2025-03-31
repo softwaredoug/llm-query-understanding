@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-query-understand
+  namespace: softwaredoug-training
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-query-understand
+  template:
+    metadata:
+      labels:
+        app: llm-query-understand
+    spec:
+      containers:
+      - name: fastapi
+        image: gcr.io/YOUR_PROJECT_ID/fastapi-gke:latest
+        ports:
+        - containerPort: 80
