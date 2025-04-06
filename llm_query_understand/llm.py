@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import os
