@@ -20,11 +20,11 @@ spec:
         - containerPort: 80
         resources:
           requests:
-            memory: "12Gi"
-            cpu: "2"
+            memory: "32Gi"
+            cpu: "4"
           limits:
-            memory: "16Gi"
-            cpu: "2"
+            memory: "32Gi"
+            cpu: "4"
         volumeMounts:
           - name: model-cache
             mountPath: /root/.cache/huggingface

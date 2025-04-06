@@ -6,6 +6,30 @@ NAMESPACE="softwaredoug-training"
 export PLATFORM="linux/amd64"
 
 
+DELETE_ALL=false
+# If 0th item is -d then s
+# set DELETE_ALL to true
+if [ "$1" == "-d" ]; then
+  DELETE_ALL=true
+  shift
+fi
+
+# Check if gcloud installed
+which gcloud
+if [ $? -ne 0 ]; then
+  echo "gcloud is not installed. Please install gcloud SDK."
+  exit 1
+fi
+
+which kubectl
+if [ $? -ne 0 ]; then
+  echo "kubectl is not installed. Please install kubectl."
+  exit 1
+fi
+
+gcloud components install gke-gcloud-auth-plugin
+
+
 # Check if GCP_PROJECT_ID set
 if [ -z "$GCP_PROJECT_ID" ]; then
   echo "GCP_PROJECT_ID is not set"
@@ -20,7 +44,6 @@ if [ -z "$K8S_CLUSTER_NAME" ]; then
 fi
 
 # Enable GCP services
-gcloud services enable containerregistry.googleapis.com container.googleapis.com
 
 
 export PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
@@ -31,7 +54,14 @@ docker buildx build --platform $PLATFORM -t "gcr.io/$GCP_PROJECT_ID/fastapi-gke:
 echo "DOCKER PUSH"
 
 docker push "gcr.io/$GCP_PROJECT_ID/fastapi-gke:latest"
+if [ $? -ne 0 ]; then
+  echo "Docker push failed. Please check your Docker configuration."
+  echo "Make sure you are authenticated to GCR."
+  echo "Run: gcloud auth configure-docker"
+  exit 1
+fi
 
+echo "GET SERVICE ACCOUNT"
 # Get service account
 export SERVICE_ACCOUNT=$(gcloud container clusters describe $K8S_CLUSTER_NAME --zone us-central1 \
     --format="value(nodeConfig.serviceAccount)")
@@ -51,6 +81,7 @@ gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
     --role="roles/storage.objectViewer"
 
 
+echo "GET CLUSTER CREDENTIALS"
 
 gcloud container clusters get-credentials "$K8S_CLUSTER_NAME" --zone "$ZONE" --project "$GCP_PROJECT_ID"
 ERROR_CODE=$?
@@ -74,10 +105,14 @@ if [ $ERROR_CODE -ne 0 ]; then
     exit 1
 fi
 
+echo "Getting k8s context..."
 
 K8S_CONTEXT=$(gcloud container clusters list \
   --filter="name=$K8S_CLUSTER_NAME" \
   --format="value(name.scope())" | sed "s/.*/gke_${GCP_PROJECT_ID}_${ZONE}_${K8S_CLUSTER_NAME}/")
+
+echo "K8S_CONTEXT: $K8S_CONTEXT"
+echo "NAMESPACE: $NAMESPACE"
 
 # Create namespace if doesn't exist
 kubectl  --context="$K8S_CONTEXT" create namespace $NAMESPACE
@@ -92,8 +127,10 @@ kubectl --context="$K8S_CONTEXT" delete pods --all -n $NAMESPACE
 kubectl --context="$K8S_CONTEXT" delete services --all -n $NAMESPACE
 
 
-exit
-
+if [ "$DELETE_ALL" = true ]; then
+  echo "Deleting all resources in namespace $NAMESPACE"
+  exit 0
+fi
 
 
 # Read k8s/deployment.yaml
