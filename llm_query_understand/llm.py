@@ -9,7 +9,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.ba
 def space_on_devices():
     print("Disk space:")
     os.system("df -h")
-    os.system("rm -rf /root/.cache/huggingface/")
+    # os.system("rm -rf /root/.cache/huggingface/")
     os.system("du -h /root/.cache/huggingface")
 
 
