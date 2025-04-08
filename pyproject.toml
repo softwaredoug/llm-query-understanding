@@ -11,7 +11,7 @@ dependencies = [
     "fastapi (>=0.115.12,<0.116.0)",
     "uvicorn (>=0.34.0,<0.35.0)",
     "transformers (>=4.50.2,<5.0.0)",
-    "torch (>=2.6.0,<3.0.0)"
+    "optimum (>=1.24.0,<2.0.0)"
 ]
 
 
@@ -25,3 +25,5 @@ mypy = "^1.15.0"
 ruff = "^0.11.4"
 pylint = "^3.3.6"
 
+[tool.poetry.group.slow.dependencies]
+torch = ">=2.6.0,<3.0.0"

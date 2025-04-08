@@ -21,13 +21,22 @@ spec:
         resources:
           requests:
             memory: "32Gi"
-            cpu: "4"
+            cpu: "2"
+            nvidia.com/gpu: "1"
           limits:
             memory: "32Gi"
-            cpu: "4"
+            cpu: "2"
+            nvidia.com/gpu: "1"
         volumeMounts:
           - name: model-cache
             mountPath: /root/.cache/huggingface
+      nodeSelector:
+        # Ensure your GPU quotas allow you to have a compute
+        # instance with a GPU
+        cloud.google.com/compute-class: "Accelerator"
+        cloud.google.com/gke-accelerator-count: "1"
+        cloud.google.com/gke-accelerator: "nvidia-l4"
+      # runtimeClassName: gvisor
       volumes:
         - name: model-cache
           persistentVolumeClaim:

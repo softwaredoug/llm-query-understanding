@@ -15,20 +15,20 @@ if [ "$1" == "-d" ]; then
 fi
 
 # Check if gcloud installed
-which gcloud
-if [ $? -ne 0 ]; then
+if ! which gcloud > /dev/null; then
   echo "gcloud is not installed. Please install gcloud SDK."
   exit 1
 fi
 
-which kubectl
-if [ $? -ne 0 ]; then
+if ! which kubectl > /dev/null; then
   echo "kubectl is not installed. Please install kubectl."
   exit 1
 fi
 
 gcloud components install gke-gcloud-auth-plugin
 
+# Get GCP project ID
+GCP_PROJECT_ID=$(gcloud config get-value project)
 
 # Check if GCP_PROJECT_ID set
 if [ -z "$GCP_PROJECT_ID" ]; then
@@ -39,7 +39,15 @@ fi
 
 if [ -z "$K8S_CLUSTER_NAME" ]; then
   echo "K8S_CLUSTER_NAME is not set"
-  echo "Create a GKE k8s cluster with default setting, public IPv4"
+  echo "Create a GKE k8s autopilot cluster with default setting, public IPv4"
+  exit 1
+fi
+
+
+# Does cluster exist?
+if [ "$(gcloud container clusters list --filter="name=$K8S_CLUSTER_NAME" --format="value(name)")" != "$K8S_CLUSTER_NAME" ]; then
+  echo "Cluster $K8S_CLUSTER_NAME does not exist"
+  echo "Create a GKE k8s autopilot cluster with default setting, public IPv4"
   exit 1
 fi
 
@@ -114,6 +122,8 @@ K8S_CONTEXT=$(gcloud container clusters list \
 echo "K8S_CONTEXT: $K8S_CONTEXT"
 echo "NAMESPACE: $NAMESPACE"
 
+# Ensure we have GPU nodes
+
 # Create namespace if doesn't exist
 kubectl  --context="$K8S_CONTEXT" create namespace $NAMESPACE
 
@@ -127,9 +137,10 @@ kubectl --context="$K8S_CONTEXT" delete pods --all -n $NAMESPACE
 kubectl --context="$K8S_CONTEXT" delete services --all -n $NAMESPACE
 
 
+
 if [ "$DELETE_ALL" = true ]; then
-  echo "Deleting all resources in namespace $NAMESPACE"
-  exit 0
+    echo "Deleting all resources in namespace $NAMESPACE"
+    echo "Recreating cluster"
 fi
 
 
@@ -150,6 +161,13 @@ fi
 
 kubectl --context="$K8S_CONTEXT" apply -f k8s/pvc.yaml
 kubectl --context="$K8S_CONTEXT" apply -f k8s/.deployment.yaml
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Failed to apply k8s deployment."
+  echo "👉 Possible remediation steps:"
+  echo "  1. Check the contents of k8s/deployment.yaml for errors."
+  echo "  2. Ensure your GCP project ID is correctly set in the file."
+  exit 1
+fi
 kubectl --context="$K8S_CONTEXT" apply -f k8s/service.yaml
 
 echo "Waiting for external IP..."
