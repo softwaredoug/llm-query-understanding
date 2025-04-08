@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from llm_query_understand.llm import LargeLanguageModel
 from time import perf_counter
+import hashlib
+import json
 import redis
 
 app = FastAPI()
@@ -25,12 +27,25 @@ You are a helpful assistant. You will be given a search query and you need to pa
 
 Here is the search query: """
 
+PROMPT_HASH = hashlib.sha256(PROMPT.encode()).hexdigest()[:8]
+
 
 @app.post("/parse")
-async def chat(request: Request):
+async def q_understand(request: Request):
     print("Received request")
     body = await request.json()
     query = body.get("query")
+    if not query:
+        return JSONResponse(status_code=400, content={"error": "No query provided"})
+    if not isinstance(query, str):
+        return JSONResponse(status_code=400, content={"error": "Query must be a string"})
+
+    cache_key = f"query:{PROMPT_HASH}:{query}"
+    cached_response = r.get(cache_key)
+    if cached_response:
+        print("Cache hit")
+        return JSONResponse(content=json.loads(cached_response))
+
     start = perf_counter()
     print(f"Responding to search query: {query}")
 
@@ -39,11 +54,19 @@ async def chat(request: Request):
     response = llm.generate(prompt, max_length=100)
     generation_time = perf_counter() - start
     print(f"Generation time: {generation_time:.2f} seconds")
+    parsed_query_as_json = response.split("\n")[-1]
+    try:
+        parsed_query_as_json = json.loads(parsed_query_as_json)
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=500, content={"error": "Failed to parse response from LLM"})
+    print(f"Parsed query: {parsed_query_as_json}")
+    r.set(cache_key, json.dumps(parsed_query_as_json), ex=3600)
     resp = {
         "generation_time": generation_time,
         "response": response,
         "prompt": prompt,
-        "query": query
+        "query": query,
+        "parsed_query": parsed_query_as_json,
     }
     return JSONResponse(content=resp)
 
