@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: val-key
+  namespace: softwaredoug-training
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: val-key
+  template:
+    metadata:
+      labels:
+        app: val-key
+    spec:
+      containers:
+      - name: val-key
+        image: valkey/valkey:latest
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: val-key
+  namespace: softwaredoug-training
+spec:
+  selector:
+    app: val-key
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  type: ClusterIP

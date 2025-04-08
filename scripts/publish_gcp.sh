@@ -53,8 +53,7 @@ fi
 
 # Enable GCP services
 
-
-export PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format='value(projectNumber)')
+PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT_ID --format="value(projectNumber)")
 export DEFAULT_SERVICE_ACCOUNT="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
 docker buildx build --platform $PLATFORM -t "gcr.io/$GCP_PROJECT_ID/fastapi-gke:latest" .
@@ -169,6 +168,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 kubectl --context="$K8S_CONTEXT" apply -f k8s/service.yaml
+kubectl --context="$K8S_CONTEXT" apply -f k8s/valkey.yaml
 
 echo "Waiting for external IP..."
 EXTERNAL_IP=""

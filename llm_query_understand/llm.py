@@ -41,5 +41,7 @@ class LargeLanguageModel:
             print(f"{k}: {v.device}")
 
         print("Generating...")
-        outputs = self.model.generate(inputs["input_ids"], max_length=max_length)
+        outputs = self.model.generate(inputs["input_ids"],
+                                      repetition_penalty=1.2,
+                                      max_length=max_length)
         return self.tokenizer.decode(outputs[0], skip_special_tokens=True)
